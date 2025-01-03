@@ -132,20 +132,32 @@ ON kaggle.raceId = races.tempRaceID
 --ON mytarget.DriverID = source.DriverID AND mytarget.RaceID = source.RaceID
 --WHEN MATCHED THEN
 --    UPDATE SET 
+--		  mytarget.classifiedfinishposition = source.positionOrder
 --        mytarget.laps = source.laps
---			etc.etc.
+--		  mytarget.overalltime = source.time
+--		  mytarget.milliseconds = source.milliseconds
+--		  mytarget.fastestlap = source.fastestLap
+--		  mytarget.fastestlaptime = source.fastestLapTime
+--		  mytarget.fastestlapspeed = source.fastestLapSpeed
 --WHEN NOT MATCHED BY TARGET THEN(literally needs to be everything that needs inserted into table)
---    INSERT (TrackName, tempCircuitID, full_track_Name, city_location, country_location, altitude)
---    VALUES (source.circuit_slang_track, source.circuitid, source.full_track_name, source.city_location, source.country_location, source.altitude);
+--    INSERT (DriverID, TeamID, RaceID, StartPosition, FinishPosition, CarNumber, laps, overalltime, milliseconds, fastestlap, fastestlaptime, fastestlapspeed)
+--    VALUES (source.DriverID, source.TeamID, source.RaceID, source.grid, source.position, source.number, source.laps, source.time, source.milliseconds, source.fastestLap, source.fastestLapTime, source.fastestLapSpeed);
 
 
 -----Kaggle grid equals your StartPosition in RaceResults--
 -----Kaggle position equals your FinishPosition in RaceResults--
 
----figure out what needs to go in merge statement; add columns to your race table for extra info; do you need positionOrder? is classification even for those who DNF'd--
+---figure out what needs to go in merge statement; add columns to your race table for extra info; positionOrder is classification even for those who DNF'd; check for online table of quali positions before running--
 
-
-
+select * from RaceResults;
+SELECT kaggle.raceId, races.RaceID, kaggle.driverId, drivers.DriverID , kaggle.constructorId, teams.TeamID, kaggle.number, kaggle.grid, kaggle.position, kaggle.positionOrder, kaggle.laps, kaggle.time, kaggle.milliseconds, kaggle.fastestLap, kaggle.fastestLapTime, kaggle.fastestLapSpeed
+FROM F1Kaggle.dbo.results as kaggle
+JOIN Drivers as drivers
+ON kaggle.driverId = drivers.tempDriverID
+JOIN Teams as teams
+ON kaggle.constructorId = teams.ConstructorID
+JOIN Races as races
+ON kaggle.raceId = races.tempRaceID;
 
 
 ---below is work but not as to how data was created/made---

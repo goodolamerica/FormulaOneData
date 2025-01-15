@@ -118,6 +118,16 @@ ON kaggle.constructorId = teams.ConstructorID
 JOIN Races as races
 ON kaggle.raceId = races.tempRaceID
 
+
+--once the select merge statement is set, need to update any of my exisitng columns to allow nulls if the kaggle table/column has nulls
+--found only one column needs updated: my FinishPosition needs to allow nulls as the kaggle table has nulls
+alter table RaceResults
+alter column FinishPosition int NULL
+
+--need to add columns for extra info want from kaggle tables
+--add columns for: PositionOrder, Laps, time, milliseconds, fastetLap, fastedLapTime, fastestLapSpeed
+
+
 --get merge table setup--
 --MERGE INTO RaceResults AS mytarget
 --USING (SELECT kaggle.raceId, races.RaceID, kaggle.driverId, drivers.DriverID , kaggle.constructorId, teams.TeamID, kaggle.number, kaggle.grid, kaggle.position, kaggle.laps, kaggle.time, kaggle.milliseconds, kaggle.fastestLap, kaggle.fastestLapTime, kaggle.fastestLapSpeed
@@ -162,6 +172,11 @@ ON kaggle.raceId = races.tempRaceID;
 
 ---below is work but not as to how data was created/made---
 
+exec sp_help 'RaceResults';
+
+SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, IS_NULLABLE
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME = 'RaceResults';
 
 
 SELECT CONSTRAINT_NAME, CONSTRAINT_TYPE

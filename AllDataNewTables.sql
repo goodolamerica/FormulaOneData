@@ -134,7 +134,7 @@ FastestLapNumber tinyint,
 FastestLapTime time,
 FastestLapSpeed float
 
---received errors, needed to update data types and/or allow NULLS
+--received errors when tried to do full merge, needed to update data types and/or allow NULLS
 alter table RaceResults
 alter column FastestLapTime nvarchar(50)
 
@@ -144,7 +144,28 @@ alter column QualiPosition int NULL
 alter table RaceResults
 alter column CarNumber tinyint NULL
 
+--another error occured during the full merge due to the constraint TeamRaceID where a driver had the same configuration twice (due to finishing twice-read wiki)
+---decided to alter/delete the constraint and add a new one that includes a unique constraint with car number
+alter table RaceResults
+drop constraint TeamRacesID
 
+alter table RaceResults
+add constraint TeamRacesID unique (DriverID, TeamID, RaceID, CarNumber)
+
+--when tried to run after above alteration, got another error to do with FinishResultsiD constraint
+---becuase not putting in qualiposition, a lot of errors will occur; update constraint to remove quali position and instead add in driverid(driverid, startposi, finispo, raceid)
+alter table RaceResults
+drop constraint FinishResultsID
+
+alter table RaceResults
+add constraint FinDriResultsID unique (DriverID, StartPosition, FinishPosition, RaceiD)
+
+--another error occured as a driver qualified twice so needed to update the constraint (again) to include carnumber((driverid, startposi, finispo, raceid)
+alter table RaceResults
+drop constraint FinDriResultsID
+
+alter table RaceResults
+add constraint FinDrResultsID unique (DriverID, StartPosition, FinishPosition, RaceiD, CarNumber)
 
 --get merge table setup--
 MERGE INTO RaceResults AS mytarget
@@ -219,10 +240,25 @@ WHEN NOT MATCHED BY TARGET THEN
 		ON seasons.SeasonID = races.SeasonID
 	JOIN TrackInformation AS track
 		ON races.TrackID = track.TrackID
-WHERE races.RaceID = 6747 AND drivers.DriverID IN (523, 603)
-ORDER BY positionOrder
+WHERE races.RaceID = 7015
+--WHERE races.RaceID = 10 AND milliseconds IS NULL
+ORDER By DriverID
 
-select * from Drivers WHERE DriverFullName LIKE '%Hawthorn%' OR DriverID = 523
+
+----below is work to chech data integrity and the merge results from above---
+select * from Races where RaceID = 10
+select * from TrackInformation where TrackID = 4
+select * from Seasons where SeasonID = 2
+select * from Drivers where DriverID IN (1, 4, 6, 9, 10, 21, 22, 868, 870)
+select * from Drivers where DriverID IN (2, 3, 5, 8, 11, 12, 14, 15, 868, 839, 832, 870)
+
+select * from RaceResults order by RaceID Desc
+
+--join tables below to verify results (season, track info)
+select Drivers.DriverFullName, Drivers.DriverID
+	from RaceResults 
+		join Drivers ON RaceResults.DriverID = Drivers.DriverID
+		where RaceID = 7731
 
 
 ---below is work but not as to how data was created/made---

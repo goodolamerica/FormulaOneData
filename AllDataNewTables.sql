@@ -125,49 +125,104 @@ alter table RaceResults
 alter column FinishPosition int NULL
 
 --need to add columns for extra info want from kaggle tables
---add columns for: PositionOrder, Laps, time, milliseconds, fastetLap, fastedLapTime, fastestLapSpeed
+--add columns for: PositionOrder, Laps, milliseconds, fastetLap, fastedLapTime, fastestLapSpeed
+alter table RaceResults
+add ClassifiedFinishPosition tinyint,
+CompletedLaps tinyint,
+Milliseconds int,
+FastestLapNumber tinyint,
+FastestLapTime time,
+FastestLapSpeed float
+
+--received errors, needed to update data types and/or allow NULLS
+alter table RaceResults
+alter column FastestLapTime nvarchar(50)
+
+alter table RaceResults
+alter column QualiPosition int NULL
+
+alter table RaceResults
+alter column CarNumber tinyint NULL
+
 
 
 --get merge table setup--
---MERGE INTO RaceResults AS mytarget
---USING (SELECT kaggle.raceId, races.RaceID, kaggle.driverId, drivers.DriverID , kaggle.constructorId, teams.TeamID, kaggle.number, kaggle.grid, kaggle.position, kaggle.laps, kaggle.time, kaggle.milliseconds, kaggle.fastestLap, kaggle.fastestLapTime, kaggle.fastestLapSpeed
---	FROM F1Kaggle.dbo.results as kaggle
---		JOIN Drivers as drivers
---		ON kaggle.driverId = drivers.tempDriverID
---		JOIN Teams as teams
---		ON kaggle.constructorId = teams.ConstructorID
---		JOIN Races as races
---		ON kaggle.raceId = races.tempRaceID
---	) as source
---ON mytarget.DriverID = source.DriverID AND mytarget.RaceID = source.RaceID
---WHEN MATCHED THEN
---    UPDATE SET 
---		  mytarget.classifiedfinishposition = source.positionOrder
---        mytarget.laps = source.laps
---		  mytarget.overalltime = source.time
---		  mytarget.milliseconds = source.milliseconds
---		  mytarget.fastestlap = source.fastestLap
---		  mytarget.fastestlaptime = source.fastestLapTime
---		  mytarget.fastestlapspeed = source.fastestLapSpeed
---WHEN NOT MATCHED BY TARGET THEN(literally needs to be everything that needs inserted into table)
---    INSERT (DriverID, TeamID, RaceID, StartPosition, FinishPosition, CarNumber, laps, overalltime, milliseconds, fastestlap, fastestlaptime, fastestlapspeed)
---    VALUES (source.DriverID, source.TeamID, source.RaceID, source.grid, source.position, source.number, source.laps, source.time, source.milliseconds, source.fastestLap, source.fastestLapTime, source.fastestLapSpeed);
+MERGE INTO RaceResults AS mytarget
+USING (
+    SELECT 
+        kaggle.raceId AS KaggleRaceID,
+        races.RaceID AS RaceID, 
+        kaggle.driverId AS KaggledriverId, 
+        drivers.DriverID AS DriverID,
+        kaggle.constructorId, 
+        teams.TeamID, 
+        kaggle.number, 
+        kaggle.grid, 
+        kaggle.position, 
+        kaggle.PositionOrder, 
+        kaggle.laps, 
+        kaggle.milliseconds, 
+        kaggle.fastestLap, 
+        kaggle.fastestLapTime, 
+        kaggle.fastestLapSpeed
+    FROM F1Kaggle.dbo.results AS kaggle
+    JOIN Drivers AS drivers
+        ON kaggle.driverId = drivers.tempDriverID
+    JOIN Teams AS teams
+        ON kaggle.constructorId = teams.ConstructorID
+    JOIN Races AS races
+        ON kaggle.raceId = races.tempRaceID
+) AS source
+ON mytarget.DriverID = source.DriverID AND mytarget.RaceID = source.RaceID
+WHEN MATCHED THEN
+    UPDATE SET 
+        mytarget.ClassifiedFinishPosition = source.PositionOrder,
+        mytarget.FinishPosition = source.position,
+        mytarget.CompletedLaps = source.laps,
+        mytarget.Milliseconds = source.milliseconds,
+        mytarget.FastestLapNumber = source.fastestLap,
+        mytarget.FastestLapTime = source.fastestLapTime,
+        mytarget.FastestLapSpeed = source.fastestLapSpeed
+WHEN NOT MATCHED BY TARGET THEN
+    INSERT (DriverID, TeamID, RaceID, StartPosition, FinishPosition, CarNumber, ClassifiedFinishPosition, CompletedLaps, Milliseconds, FastestLapNumber, FastestLapTime, FastestLapSpeed)
+    VALUES (source.DriverID, source.TeamID, source.RaceID, source.grid, source.position, source.number, source.PositionOrder, source.laps, source.milliseconds, source.fastestLap, source.fastestLapTime, source.fastestLapSpeed);
 
 
------Kaggle grid equals your StartPosition in RaceResults--
------Kaggle position equals your FinishPosition in RaceResults--
+--do double checks of error on RaceID, DriverID, TeamID--
+ SELECT 
+        kaggle.raceId AS KaggleRaceID,
+        races.RaceID AS RaceID, 
+        kaggle.driverId AS KaggledriverId, 
+        drivers.DriverID AS DriverID,
+        kaggle.constructorId, 
+        teams.TeamID, 
+        kaggle.number, 
+        kaggle.grid, 
+        kaggle.position, 
+        kaggle.PositionOrder, 
+        kaggle.laps, 
+        kaggle.milliseconds, 
+        kaggle.fastestLap, 
+        kaggle.fastestLapTime, 
+        kaggle.fastestLapSpeed,
+		seasons.SeasonID,
+		seasons.Year,
+		track.ShortName
+    FROM F1Kaggle.dbo.results AS kaggle
+    JOIN Drivers AS drivers
+        ON kaggle.driverId = drivers.tempDriverID
+    JOIN Teams AS teams
+        ON kaggle.constructorId = teams.ConstructorID
+    JOIN Races AS races
+        ON kaggle.raceId = races.tempRaceID
+	JOIN Seasons AS seasons
+		ON seasons.SeasonID = races.SeasonID
+	JOIN TrackInformation AS track
+		ON races.TrackID = track.TrackID
+WHERE races.RaceID = 6747 AND drivers.DriverID IN (523, 603)
+ORDER BY positionOrder
 
----figure out what needs to go in merge statement; add columns to your race table for extra info; positionOrder is classification even for those who DNF'd; check for online table of quali positions before running--
-
-select * from RaceResults;
-SELECT kaggle.raceId, races.RaceID, kaggle.driverId, drivers.DriverID , kaggle.constructorId, teams.TeamID, kaggle.number, kaggle.grid, kaggle.position, kaggle.positionOrder, kaggle.laps, kaggle.time, kaggle.milliseconds, kaggle.fastestLap, kaggle.fastestLapTime, kaggle.fastestLapSpeed
-FROM F1Kaggle.dbo.results as kaggle
-JOIN Drivers as drivers
-ON kaggle.driverId = drivers.tempDriverID
-JOIN Teams as teams
-ON kaggle.constructorId = teams.ConstructorID
-JOIN Races as races
-ON kaggle.raceId = races.tempRaceID;
+select * from Drivers WHERE DriverFullName LIKE '%Hawthorn%' OR DriverID = 523
 
 
 ---below is work but not as to how data was created/made---

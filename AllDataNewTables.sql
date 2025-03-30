@@ -1,3 +1,4 @@
+-----start of new NEW beginning?
 
 ---create a new Tracks Table--
 CREATE TABLE TrackInformation
@@ -259,6 +260,114 @@ select Drivers.DriverFullName, Drivers.DriverID
 	from RaceResults 
 		join Drivers ON RaceResults.DriverID = Drivers.DriverID
 		where RaceID = 7731
+
+
+---when looking at data to create statistics found some DriverFullName errors which skews final results
+select * from Drivers
+	where DriverFullName IN ('Logan Sargant', 'Pietro Fittipaldi', 'Logan Sargeant', 'Guanyu Zhou', 'Zhou Guanyu') OR ( DriverFullName LIKE 'Sergio%')
+
+
+---standardized Logan Sargant name
+select * from Drivers
+	where DriverFullName LIKE 'Logan%';
+update Drivers
+set DriverFullName = REPLACE(DriverFullName, 'Logan Sargeant', 'Logan Sargant')
+where DriverFullName = 'Logan Sargeant';
+
+
+---combine Logan Sargant RaceResults data and remove duplicate Driver data from Drivers
+alter table RaceResults
+drop constraint TeamRacesID
+
+alter table RaceResults
+add constraint TeamRaceDriverID unique (RaceResultsID, DriverID, TeamID, RaceiD, CarNumber)
+
+alter table RaceResults
+drop constraint FinDrResultsID
+
+alter table RaceResults
+add constraint DriverStartFinishResultsID unique (RaceResultsID, DriverID, StartPosition, FinishPosition, RaceID, CarNumber)
+
+update RaceResults
+set DriverID = 870
+where DriverID = 14
+
+select * from Drivers
+	where DriverFullName = 'Logan Sargant'
+
+DELETE FROM Drivers
+	WHERE DriverID = 14
+--------Logan Sargant is now one data point
+
+----SERGIO PEREZ COMBINE ROWS
+select * from RaceResults
+	where DriverID IN (20, 839) 
+
+update RaceResults
+set DriverID = 839
+where DriverID = 20;
+
+select * from Drivers where DriverFullName LIKE 'Sergio P%';
+
+DELETE FROM Drivers	
+	WHERE DriverID = 20;
+----Sergio is now updated to one data point
+
+---ZHOU GUANYU COMBINE ROWS
+select * from RaceResults where DriverID IN (23, 868)
+
+update RaceResults
+set DriverID = 868
+where DriverID = 23;
+
+DELETE FROM Drivers
+	WHERE DriverID = 23;
+
+select * from Drivers where DriverFullName LIKE '%Zhou'
+---Zhou now updated to one data point
+
+---WITH THE UPDATING, THERE ARE SOME DUPLICATE 2024 RACES
+----combining/removing 2024 duplicates
+
+----pull together duplicates and update each QualiPosition then delete unnecessary row
+WITH Merged AS (
+SELECT
+	RaceResultsID,
+	DriverID,
+	TeamID,
+	RaceID,
+	COALESCE(MAX(QualiPosition), 0) AS QualiPosition,
+	StartPosition,
+	FinishPosition,
+	CarNumber,
+	COALESCE(MAX(ClassifiedFinishPosition), 0) AS ClassifiedFinishPosition,
+	COALESCE(MAX(CompletedLaps), 0) AS CompletedLaps,
+	COALESCE(MAX(Milliseconds), 0) AS Milliseconds,
+	COALESCE(MAX(FastestLapNumber), 0) AS FastestLapNumber,
+	COALESCE(MAX(FastestLapTime), '00:00:00') AS FastestLapSpeed
+FROM
+	RaceResults
+WHERE DriverID = 868 AND RaceID = 14
+GROUP BY RaceResultsID, DriverID, TeamID, RaceID, StartPosition, FinishPosition, CarNumber
+)
+select * from Merged
+order by RaceID ASC;
+
+update RaceResults
+set 
+QualiPosition = 14
+--StartPosition = 20
+where DriverID = 868 AND RaceResultsID = 369056;
+
+DELETE FROM RaceResults
+	WHERE DriverID = 868 AND RaceResultsID = 238;
+---finished manually updating QualiPosition fields for those who had duplicate Drivers
+
+
+
+
+
+
 
 
 ---below is work but not as to how data was created/made---

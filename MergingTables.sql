@@ -1,3 +1,5 @@
+----is this start of merging data?
+
 --needed to add unuqie for track names so no duplicates when merging data--
 alter table Tracks add unique (TrackName)
 
